@@ -5,32 +5,41 @@ import pickle
 import gdown
 import os
 
-# ✅ Step 1: Download the .pkl file from Google Drive if not present
-file_id = "1B52-pG2gQggEZgI3l2LkkbX1R52EAmiw"  # Your Drive file ID
-pkl_path = "movie_data.pkl"
+# ✅ Step 1: Download the pickle file from Google Drive (only if not already downloaded)
+file_id = "1B52-pG2gQggEZgI3l2LkkbX1R52EAmiw"  # your file ID
+url = f"https://drive.google.com/uc?id={file_id}"
+output_file = "movie_data.pkl"
 
-if not os.path.exists(pkl_path):
-    gdown.download(id=file_id, output=pkl_path, quiet=False)
+if not os.path.exists(output_file):
+    st.info("Downloading data file from Google Drive...")
+    gdown.download(url, output_file, quiet=False)
+    st.success("Download completed!")
 
 # ✅ Step 2: Load the data
-with open(pkl_path, "rb") as f:
-    movies, cosine_sim = pickle.load(f)
+with open(output_file, 'rb') as file:
+    movies, cosine_sim = pickle.load(file)
 
-# ✅ Step 3: Fetch poster from TMDB
+# ✅ Function to fetch poster from TMDB API
 def fetch_poster(movie_id):
     api_key = "7a793d14632a0c96f773222088510b5d"
     url = f"https://api.themoviedb.org/3/movie/{movie_id}?api_key={api_key}"
+    
     try:
         response = requests.get(url, timeout=5)
         response.raise_for_status()
         data = response.json()
         poster_path = data.get('poster_path')
-        return f"https://image.tmdb.org/t/p/w500{poster_path}" if poster_path else None
-    except Exception as e:
-        print(f"Poster error: {e}")
-        return None
+        if poster_path:
+            return f"https://image.tmdb.org/t/p/w500{poster_path}"
+        else:
+            return None
+    except requests.exceptions.Timeout:
+        print(f"Timeout when fetching poster for movie_id: {movie_id}")
+    except requests.exceptions.RequestException as e:
+        print(f"Error fetching poster for movie_id {movie_id}: {e}")
+    return None
 
-# ✅ Step 4: Fetch rating from TMDB
+# ✅ Function to fetch rating
 def fetch_rating(movie_id):
     api_key = "7a793d14632a0c96f773222088510b5d"
     url = f"https://api.themoviedb.org/3/movie/{movie_id}?api_key={api_key}"
@@ -42,12 +51,12 @@ def fetch_rating(movie_id):
     except:
         return "N/A"
 
-# ✅ Step 5: Get recommendations
+# ✅ Function to get movie recommendations
 def get_recommendations(title, cosine_sim=cosine_sim):
     try:
         idx = movies[movies['title'] == title].index[0]
     except IndexError:
-        st.error("Selected movie not found.")
+        st.error("Selected movie not found in the dataset.")
         return pd.DataFrame()
     
     sim_scores = list(enumerate(cosine_sim[idx]))
@@ -55,7 +64,7 @@ def get_recommendations(title, cosine_sim=cosine_sim):
     movie_indices = [i[0] for i in sim_scores]
     return movies.iloc[movie_indices]
 
-# ✅ Step 6: Streamlit UI
+# ✅ Streamlit UI
 st.markdown("<h1 style='text-align: center; color: #E50914;'>🎬 Movie Recommendation System</h1>", unsafe_allow_html=True)
 st.markdown("<p style='text-align: center; color: gray;'>Find similar movies with posters and ratings</p><br>", unsafe_allow_html=True)
 
