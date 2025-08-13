@@ -1,9 +1,18 @@
-
-
 import streamlit as st
 import pandas as pd
 import requests
 import pickle
+import os
+import gdown
+
+# ---------------- DOWNLOAD FILE FROM GOOGLE DRIVE IF NOT EXISTS ----------------
+file_id = "1B52-pG2gQggEZgI3l2LkkbX1R52EAmiw"
+url = f"https://drive.google.com/uc?id={file_id}"
+output = "movie_data.pkl"
+
+if not os.path.exists(output):
+    with st.spinner("📥 Downloading movie dataset..."):
+        gdown.download(url, output, quiet=False)
 
 # ---------------- SESSION SETUP ----------------
 if "logged_in" not in st.session_state:
@@ -39,7 +48,6 @@ def main_app():
     with open('movie_data.pkl', 'rb') as file:
         movies, cosine_sim = pickle.load(file)
 
-    # Function to fetch poster
     def fetch_poster(movie_id):
         api_key = "7a793d14632a0c96f773222088510b5d"
         url = f"https://api.themoviedb.org/3/movie/{movie_id}?api_key={api_key}"
@@ -54,7 +62,6 @@ def main_app():
             return None
         return None
 
-    # Function to fetch rating
     def fetch_rating(movie_id):
         api_key = "7a793d14632a0c96f773222088510b5d"
         url = f"https://api.themoviedb.org/3/movie/{movie_id}?api_key={api_key}"
@@ -66,7 +73,6 @@ def main_app():
         except:
             return "N/A"
 
-    # Recommendation function
     def get_recommendations(title, cosine_sim=cosine_sim):
         try:
             idx = movies[movies['title'] == title].index[0]
@@ -79,7 +85,6 @@ def main_app():
         movie_indices = [i[0] for i in sim_scores]
         return movies.iloc[movie_indices]
 
-    # ---- HEADER ----
     col1, col2 = st.columns([4, 1])
     with col1:
         st.markdown(f"<h3>🎬 Welcome, {st.session_state.username}!</h3>", unsafe_allow_html=True)
@@ -101,7 +106,7 @@ def main_app():
             st.markdown("### ⭐ Top 10 Recommended Movies")
             st.markdown("<hr style='border: 1px solid #444;'>", unsafe_allow_html=True)
             
-            for i in range(0, 10, 5):  # 2 rows of 5
+            for i in range(0, 10, 5):
                 cols = st.columns(5)
                 for col, j in zip(cols, range(i, i + 5)):
                     if j < len(recommendations):
@@ -122,5 +127,3 @@ if st.session_state.logged_in:
     main_app()
 else:
     login()
-
-
